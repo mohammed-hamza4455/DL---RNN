@@ -4,69 +4,190 @@
 To develop a Recurrent Neural Network (RNN) model for predicting stock prices using historical closing price data.
 
 ## Problem Statement and Dataset
+Stock price prediction is an important task in financial analysis where future prices are estimated based on historical data. The objective of this project is to develop a Recurrent Neural Network (RNN) model using historical closing price data to capture temporal patterns and predict future stock prices, and to evaluate the model’s performance using appropriate metrics.
 
+### train dataset
+<img width="665" height="615" alt="image" src="https://github.com/user-attachments/assets/7f988cd6-7ba0-4113-a769-008f848b5ab4" />
 
+### test dataset
+<img width="581" height="675" alt="image" src="https://github.com/user-attachments/assets/1ce32ae1-be03-4410-9287-d6129a2776d5" />
 
 ## DESIGN STEPS
 ### STEP 1: 
 
-Write your own steps
+Load and normalize data, create sequences.
 
 ### STEP 2: 
 
-
+Convert data to tensors and set up DataLoader.
 
 ### STEP 3: 
 
-
+Define the RNN model architecture
 
 ### STEP 4: 
 
-
+Summarize, compile with loss and optimizer.
 
 ### STEP 5: 
 
-
+Train the model with loss tracking.
 
 ### STEP 6: 
 
-
+Predict on test data, plot actual vs. predicted prices.
 
 
 
 ## PROGRAM
 
-### Name:
+### Name: MOHAMMED HAMZA M
 
-### Register Number:
+### Register Number: 212224230167
 
 ```python
-# Define RNN Model
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+from sklearn.preprocessing import MinMaxScaler
+import torch
+import torch.nn as nn
+from torch.utils.data import DataLoader, TensorDataset
+
+## Step 1: Load and Preprocess Data
+# Load training and test datasets
+df_train = pd.read_csv('/content/trainset.csv')
+df_test = pd.read_csv('/content/testset.csv')
+
+df_train.head()
+
+# Use closing prices
+train_prices = df_train['Close'].values.reshape(-1, 1)
+test_prices = df_test['Close'].values.reshape(-1, 1)
+
+# Normalize the data based on training set only
+scaler = MinMaxScaler()
+scaled_train = scaler.fit_transform(train_prices)
+scaled_test = scaler.transform(test_prices)
+
+# Create sequences
+def create_sequences(data, seq_length):
+    x = []
+    y = []
+    for i in range(len(data) - seq_length):
+        x.append(data[i:i+seq_length])
+        y.append(data[i+seq_length])
+    return np.array(x), np.array(y)
+
+seq_length = 60
+x_train, y_train = create_sequences(scaled_train, seq_length)
+x_test, y_test = create_sequences(scaled_test, seq_length)
+
+x_train.shape, y_train.shape, x_test.shape, y_test.shape
+
+# Convert to PyTorch tensors
+x_train_tensor = torch.tensor(x_train, dtype=torch.float32)
+y_train_tensor = torch.tensor(y_train, dtype=torch.float32)
+x_test_tensor = torch.tensor(x_test, dtype=torch.float32)
+y_test_tensor = torch.tensor(y_test, dtype=torch.float32)
+
+# Create dataset and dataloader
+train_dataset = TensorDataset(x_train_tensor, y_train_tensor)
+train_loader = DataLoader(train_dataset, batch_size=64, shuffle=True)
+
+## Step 2: Define RNN Model
 class RNNModel(nn.Module):
-    # write your code here
+  def __init__(self,input_size=1,hidden_size=64,num_layers=2,output_size=1):
+    super(RNNModel,self).__init__()
+    self.rnn=nn.RNN(input_size,hidden_size,num_layers,batch_first=True)
+    self.fc=nn.Linear(hidden_size,output_size)
+  def forward(self,x):
+    out,_=self.rnn(x)
+    out=self.fc(out[:,-1,:])
+    return out
 
+model = RNNModel()
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+model = model.to(device)
 
+!pip install torchinfo
 
+from torchinfo import summary
 
-# Train the Model
+# input_size = (batch_size, seq_len, input_size)
+summary(model, input_size=(64, 60, 1))
 
-# Write your code here
+criterion =nn.MSELoss()
+optimizer =torch.optim.Adam(model.parameters(),lr=0.001)
 
+## Step 3: Train the Model
+def train_model(model, train_loader, criterion, optimizer, epochs=20):
+    train_losses = []
+    model.train()
+    for epoch in range(epochs):
+      total_loss=0
+      for x_batch,y_batch in train_loader:
+        x_batch,y_batch=x_batch.to(device),y_batch.to(device)
+        optimizer.zero_grad()
+        outputs=model(x_batch)
+        loss=criterion(outputs,y_batch)
+        loss.backward()
+        optimizer.step()
+        total_loss+=loss.item()
+      train_losses.append(total_loss/len(train_loader))
+      print(f'Epoch {epoch+1}/{epochs}, Loss: {total_loss/len(train_loader):.4f}')
+      # Plot training loss
+    plt.plot(train_losses, label='Training Loss')
+    plt.xlabel('Epoch')
+    plt.ylabel('MSE Loss')
+    plt.title('Training Loss Over Epochs')
+    print('Name:MOHAMMED HAMZA M')
+    print('Register Number:212224230167')
+    plt.legend()
+    plt.show()
 
+## Step 4: Make Predictions on Test Set
+model.eval()
+with torch.no_grad():
+    predicted = model(x_test_tensor.to(device)).cpu().numpy()
+    actual = y_test_tensor.cpu().numpy()
+
+# Inverse transform the predictions and actual values
+predicted_prices = scaler.inverse_transform(predicted)
+actual_prices = scaler.inverse_transform(actual)
+
+# Plot the predictions vs actual prices
+print('Name:MOHAMMED HAMZA M')
+print('Register Number:212224230167')
+plt.figure(figsize=(10, 6))
+plt.plot(actual_prices, label='Actual Price')
+plt.plot(predicted_prices, label='Predicted Price')
+plt.xlabel('Time')
+plt.ylabel('Price')
+plt.title('Stock Price Prediction using RNN')
+plt.legend()
+plt.show()
+print(f'Predicted Price: {predicted_prices[-1]}')
+print(f'Actual Price: {actual_prices[-1]}')
 ```
 
 ### OUTPUT
 
 ## Training Loss Over Epochs Plot
+<img width="795" height="822" alt="image" src="https://github.com/user-attachments/assets/0c9d42aa-b8b2-4b66-a5a3-32852bdc8593" />
 
-Include your plot here
+
 
 ## True Stock Price, Predicted Stock Price vs time
+<img width="838" height="550" alt="image" src="https://github.com/user-attachments/assets/863010b0-72be-4cef-914c-382a969e245a" />
 
-Include your plot here
+
 
 ### Predictions
-Include the predictions on test data
+<img width="807" height="52" alt="image" src="https://github.com/user-attachments/assets/6b1c673b-4c63-4604-af3e-9874827a0655" />
+
+
+
 
 ## RESULT
 Include your result here
